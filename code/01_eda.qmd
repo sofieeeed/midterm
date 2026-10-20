@@ -1,11 +1,75 @@
 ---
 title: EDA
-author: Your name
+author: Sofia Dominesey
 format: gfm
 ---
 
 ```{r}
 #| label: setup
+library(dplyr)
+library(justviz)
+library(ggplot2)
+library(tidyr)
 
-# 
+unique(ej_natl$indicator)
+# i think looking at traffic and diesel exposure and what populations are in those tracts would be cool
+```
+
+``` {r}
+#| label: diesel_exposure
+diesel_exposure <- ej_natl |>
+  filter(indicator == "diesel")
+
+ggplot(diesel_exposure, aes(x = value_ptile)) +
+  geom_histogram(binwidth = 2,
+                   color = "white")
+
+# right-skewed -> md ranks higher against other tracts nationally
+```
+
+``` {r}
+#| label: traffic
+traffic_density <- ej_natl |>
+  filter(indicator == "traffic")
+
+ggplot(traffic_density, aes(x = value_ptile)) +
+  geom_histogram(binwidth = 2,
+                 color = "white")
+
+#also right-skewed -> md higher than national
+```
+
+``` {r}
+#| label: selecting
+#| label: selecting
+tracts <- acs |>
+  filter(level == "tract") |>
+  select(county, 
+         name, 
+         black, 
+         no_vehicle_hh, 
+         poverty, 
+         low_income, 
+         pop_density)
+
+car_bad <- ej_natl |>
+  filter(indicator %in% c("diesel", "traffic")) |>
+  select(tract, 
+         indicator, 
+         value_ptile)
+```
+
+``` {r}
+#| label: join
+car_bad <- car_bad |>
+  pivot_wider(names_from = indicator, values_from = value_ptile)
+
+car_bad <- inner_join(tracts, car_bad, by = c("name" = "tract"))
+```
+
+``` {r}
+#| label: eda-stuff
+ggplot(car_bad, aes(x = diesel, y = black)) +
+  geom_point()
+
 ```
