@@ -4,72 +4,90 @@ author: Sofia Dominesey
 format: gfm
 ---
 
-```{r}
+## Background
+
+I thought critically again and realized why not apply this project to my capstone and have something extra to put in my capstone deliverables?
+
+Some background on my capstone: I'm making maps of Mars! Specifically, I'm looking for sites where microfossils could be preserved in surface rocks. I'm doing this by looking at:
+- what the rocks are made of
+- geologic units
+- current surface conditions
+- what these can tell us about conditions on Noachian/Hesperian Mars
+- where and whether ancient life from these periods could be preserved in those rocks
+
+For this project, I want to make visualizations that help my audience understand how what I'm looking at on Mars directly relates to what we've studied and know about the Earth.
+
+## Goal
+Now that I'm applying this to my research, my goal is to show readers which rock types on Earth have been shown to preserve ancient microfossils, and whether that changes over time. If the same few rock types keep showing up, that supports prioritizing them in my capstone research.
+
+Questions I want to explore:
+1. Which lithologies (rock types) show early fossil occurrences?
+2. Does that mix change across time?
+3. Does lithology relate to depositional environment?
+
+## Data
+I'm using occurrence data from the Paleobiology Database (PBDB). In its own words, "The Paleobiology Database is an online, non-governmental, non-profit public resource for paleontological data." Each row is one fossil occurrence. 
+- Downloaded: October 20, 2026, via the PBDB download generator : https://paleobiodb.org/classic/displayDownloadGenerator 
+- Time interval: Archean through Cambrian
+- Records: 54,984 occurrences
+- Parameters: [1] "occurrence_no"    "record_type"      "reid_no"          "flags"            "collection_no"    "identified_name" 
+ [7] "identified_rank"  "identified_no"    "difference"       "accepted_name"    "accepted_rank"    "accepted_no"     
+[13] "early_interval"   "late_interval"    "max_ma"           "min_ma"           "reference_no"     "phylum"          
+[19] "class"            "order"            "family"           "genus"            "abund_value"      "abund_unit"      
+[25] "cc"               "state"            "county"           "latlng_basis"     "latlng_precision" "altitude_value"  
+[31] "altitude_unit"    "geogscale"        "geogcomments"     "formation"        "geological_group" "member"          
+[37] "lithdescript"     "lithology1"       "lithification1"   "minor_lithology1" "lithology2"       "lithification2"  
+[43] "minor_lithology2" "environment"      "tectonic_setting" "geology_comments"
+
+## Plan and caveats
+Most of these records are Cambrian animals, so my first step is filtering to microbial and algal groups. After that I'll clean up the lithology labels and group them into categories that match my Mars target rock types: chert/silica, fine-grained mudstone/shale, carbonate, and other.
+The PBDB isn't a complete record of microfossils, and the counts reflect where people have looked as much as where life was preserved. 
+
+``` {r}
 #| label: setup
-library(dplyr)
-library(justviz)
-library(ggplot2)
 library(tidyr)
-
-unique(ej_natl$indicator)
-# i think looking at traffic and diesel exposure and what populations are in those tracts would be cool
+library(ggplot2)
+library(dplyr)
 ```
-
 ``` {r}
-#| label: diesel_exposure
-diesel_exposure <- ej_natl |>
-  filter(indicator == "diesel")
-
-ggplot(diesel_exposure, aes(x = value_ptile)) +
-  geom_histogram(binwidth = 2,
-                   color = "white")
-
-# right-skewed -> md ranks higher against other tracts nationally
+#| label: load-data
+df <- readr::read_csv(here::here("data", "pbdb_data.csv"))
+names(df)
+summary(df)
 ```
-
 ``` {r}
-#| label: traffic
-traffic_density <- ej_natl |>
-  filter(indicator == "traffic")
+#| label: getting-rid-of-stuff-we-dont-care-abt
+df <- df |>
+  select(occurrence_no, 
+         collection_no, 
+         identified_name, 
+         accepted_name, 
+         phylum, 
+         class, 
+         genus, 
+         early_interval, 
+         max_ma, 
+         min_ma, 
+         formation, 
+         lithology1, 
+         lithology2, 
+         lithdescript, 
+         environment)
+glimpse(df)
 
-ggplot(traffic_density, aes(x = value_ptile)) +
-  geom_histogram(binwidth = 2,
-                 color = "white")
+# i am not a biologist (i know, confusing) so i had do a little bit of researching here to pick out what the some of names here meant (most of the ones i didn't know were animals, go figure). i only want single celled organisms and simple algae, namely stuff like cyanobacteria. 
+unique(df$phylum)
 
-#also right-skewed -> md higher than national
-```
-
-``` {r}
-#| label: selecting
-#| label: selecting
-tracts <- acs |>
-  filter(level == "tract") |>
-  select(county, 
-         name, 
-         black, 
-         no_vehicle_hh, 
-         poverty, 
-         low_income, 
-         pop_density)
-
-car_bad <- ej_natl |>
-  filter(indicator %in% c("diesel", "traffic")) |>
-  select(tract, 
-         indicator, 
-         value_ptile)
-```
-
-``` {r}
-#| label: join
-car_bad <- car_bad |>
-  pivot_wider(names_from = indicator, values_from = value_ptile)
-
-car_bad <- inner_join(tracts, car_bad, by = c("name" = "tract"))
-```
-
-``` {r}
-#| label: eda-stuff
-ggplot(car_bad, aes(x = diesel, y = black)) +
-  geom_point()
+microbial_phylums <- df |>
+  filter(phylum %in% 
+           c("Cyanobacteria",        # photosynthetic bacteria
+             "Chlorophyta",          # green algae
+             "Foraminifera",         # single celled protists with shells
+             "Rhodophyta",           # red algae
+             "Dinozoa",              # more single celled algae basically
+             "Radiolaria",           # single celled protists with silica skeletons (cool, right?)
+             "Chytridiomycota"))    # single celled fungi
+glimpse(microbial_phylums)
+# now we're down to 1853 occurences <-- much easier to work with
 
 ```
