@@ -38,6 +38,7 @@ I'm using occurrence data from the Paleobiology Database (PBDB). In its own word
 [31] "altitude_unit"    "geogscale"        "geogcomments"     "formation"        "geological_group" "member"          
 [37] "lithdescript"     "lithology1"       "lithification1"   "minor_lithology1" "lithology2"       "lithification2"  
 [43] "minor_lithology2" "environment"      "tectonic_setting" "geology_comments"
+I think this is how to cite it -> basically everything I put in the csv generator to return the original data I used
 
 ## Plan and caveats
 Most of these records are Cambrian animals, so my first step is filtering to microbial and algal groups. After that I'll clean up the lithology labels and group them into categories that match my Mars target rock types: chert/silica, fine-grained mudstone/shale, carbonate, and other.
@@ -89,5 +90,56 @@ microbial_phylums <- df |>
              "Chytridiomycota"))    # single celled fungi
 glimpse(microbial_phylums)
 # now we're down to 1853 occurences <-- much easier to work with
+```
+
+``` {r}
+#| label: phylum-distribution-chart
+phylum_dist <- ggplot(microbial_phylums, aes(x = phylum)) +
+  geom_bar()
+# most stuff is cyanobacteria, which is great. 
+
+# cut out phylums with little to no occurences
+microbial_phylums <- df |>
+  filter(phylum %in% 
+           c("Cyanobacteria",      
+             "Chlorophyta",   
+             "Foraminifera",   
+             "Rhodophyta",             
+             "Radiolaria"))  
+phylum_dist <- ggplot(microbial_phylums, aes(x = phylum)) +
+  geom_bar()
+phylum_dist
+```
+
+``` {r}
+#| label: primary-lithology-distribution
+# thinking about combining lithology1 and lithology2 columns in order to see bigger picture. 
+
+# how many lithology2 columns are NA?
+sum(is.na(microbial_phylums$lithology2))
+# 1527 are NA ... so prob just best to look at primary lithology
+
+lithology <- microbial_phylums |>
+  count(lithology1) |>
+  mutate(share = n / sum(n))
+
+percent <- scales::label_percent(accuracy = 1)
+
+lithology_dist <- ggplot(lithology, aes(x = lithology1, y = share, fill = lithology1)) +
+  geom_col() +
+  scale_y_continuous(labels = percent) 
+lithology_dist
+
+# quotations mean general group name --> re-categorize the other ones to fall under these too
+# bafflestone and bindstone limestones, limestones are carbonates tho
+# get rid of NA
+lithology <- lithology |>
+  mutate(lithology1 = case_when(
+    lithology1 %in% c("\"carbonate\"", "bafflestone", "bindstone") ~ "carbonate",
+    lithology1 %in% c("\"shale\"") ~ "shale",
+    lithology1 %in% c("\"siliciclastic\"", "chert") ~ "siliciclastic"),
+  ))
+
+
 
 ```
