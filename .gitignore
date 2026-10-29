@@ -9,3 +9,6 @@ Makefile
 README.qmd
 dag.png
 .quarto
+
+/.quarto/
+**/*.quarto_ipynb

@@ -1,11 +1,79 @@
 ---
 title: Sketches
-author: Your name
+author: Sofia Dominesey
 format: gfm
 ---
 
 ```{r}
 #| label: setup
 
+# packages
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(ggalluvial)
+
+# filters 
+df <- readr::read_csv(here::here("data", "pbdb_data.csv"))
+
+df <- df |>
+  select(occurrence_no, 
+         collection_no, 
+         identified_name, 
+         accepted_name, 
+         phylum, 
+         class, 
+         genus, 
+         early_interval, 
+         max_ma, 
+         min_ma, 
+         formation, 
+         lithology1, 
+         lithology2, 
+         lithdescript, 
+         environment)
+
+microbial_phylums <- df |>
+  filter(phylum %in% 
+           c("Cyanobacteria",        # photosynthetic bacteria
+             "Chlorophyta",          # green algae
+             "Foraminifera",         # single celled protists with shells
+             "Rhodophyta",           # red algae
+             "Dinozoa",              # more single celled algae basically
+             "Radiolaria",           # single celled protists with silica skeletons (cool, right?)
+             "Chytridiomycota"))    # single celled fungi
+
+lithology <- microbial_phylums |>
+  mutate(lithology1 = case_when(
+    lithology1 %in% c("\"limestone\"", "\"carbonate\"", "marl", "chalk", "dolomite", "lime mudstone", "grainstone", "packstone", "wackestone", "rudstone", "floatstone", "framestone", "bafflestone", "bindstone", "\"reef rocks\"") ~ "carbonate",
+    lithology1 %in% c("sandstone", "siltstone", "mudstone", "claystone", "\"shale\"", "conglomerate", "gravel", "\"siliciclastic\"") ~ "siliciclastic",
+    lithology1 %in% c("marl") ~ "mixed carbonate-silicastic",
+    lithology1 %in% c("chert", "phosphorite") ~ "biogenic/chemical deposits",
+    lithology1 == "not reported" | is.na(lithology1) ~ "not reported",
+    .default = "other"
+  )) |> 
+  count(lithology1) |>
+  mutate(share = n / sum(n))
+```
+
+
+## Chart 1:
+I think an alluvial chart would be cool for this project as a way to get me practice using something I haven't worked with yet.
+
+```{r}
+#| label: alluvial-code-sketch
+
+my_counts <- my_data |>
+  count(var_a, var_b, var_c)          # one row per combination, with n
+
+ggplot(my_counts,
+       aes(axis1 = var_a, axis2 = var_b, axis3 = var_c, y = n)) +
+  geom_alluvium(aes(fill = var_b)) +   # the flowing bands
+  geom_stratum() +                     # the vertical bars
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum))) +  # labels on the bars
+  scale_x_discrete(limits = c("A", "B", "C"))    # axis names
 
 ```
+
+

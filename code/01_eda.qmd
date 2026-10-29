@@ -20,7 +20,7 @@ For this project, I want to make visualizations that help my audience understand
 ## Goal
 Now that I'm applying this to my research, my goal is to show readers which rock types on Earth have been shown to preserve ancient microfossils, and whether that changes over time. If the same few rock types keep showing up, that supports prioritizing them in my capstone research.
 
-Questions I want to explore:
+Questions I want to answer:
 1. Which lithologies (rock types) show early fossil occurrences?
 2. Does that mix change across time?
 3. Does lithology relate to depositional environment?
@@ -50,6 +50,7 @@ library(tidyr)
 library(ggplot2)
 library(dplyr)
 ```
+
 ``` {r}
 #| label: load-data
 df <- readr::read_csv(here::here("data", "pbdb_data.csv"))
@@ -129,17 +130,47 @@ lithology_dist <- ggplot(lithology, aes(x = lithology1, y = share, fill = lithol
   geom_col() +
   scale_y_continuous(labels = percent) 
 lithology_dist
+unique(lithology$lithology1)
 
 # quotations mean general group name --> re-categorize the other ones to fall under these too
-# bafflestone and bindstone limestones, limestones are carbonates tho
 # get rid of NA
+# https://www.biorxiv.org/content/10.64898/2026.10.15.759295v1
+# supplementary materials shows how they categorized all the PBDB lithologies
+# I'll use their categorization
 lithology <- lithology |>
   mutate(lithology1 = case_when(
-    lithology1 %in% c("\"carbonate\"", "bafflestone", "bindstone") ~ "carbonate",
-    lithology1 %in% c("\"shale\"") ~ "shale",
-    lithology1 %in% c("\"siliciclastic\"", "chert") ~ "siliciclastic"),
-  ))
+    lithology1 %in% c("\"limestone\"", "\"carbonate\"", "marl", "chalk", "dolomite", "lime mudstone", "grainstone", "packstone", "wackestone", "rudstone", "floatstone", "framestone", "bafflestone", "bindstone", "\"reef rocks\"") ~ "carbonate",
+    lithology1 %in% c("sandstone", "siltstone", "mudstone", "claystone", "\"shale\"", "conglomerate", "gravel", "\"siliciclastic\"") ~ "siliciclastic",
+    lithology1 %in% c("marl") ~ "mixed carbonate-silicastic",
+    lithology1 %in% c("chert", "phosphorite") ~ "biogenic/chemical deposits",
+    lithology1 == "not reported" | is.na(lithology1) ~ "not reported",
+   .default = "other"
+  )) |> 
+  count(lithology1) |>
+  mutate(share = n / sum(n))
+ 
+lithology_dist <- ggplot(lithology, aes(x = lithology1, y = share, fill = lithology1)) +
+  geom_col() +
+  scale_y_continuous(labels = percent) +
+  geom_text(
+    aes(label = scales::percent(share, accuracy = 0.1)), 
+    vjust = 1.5, 
+    size = 3.5)
+lithology_dist
 
+# probably will end up using a similar graph for the final product
+```
+Carbonates show the most fossil occurrences (52%) for my selected time periods, probably because microbes helped build carbonate rock (ex. stromatolites), so the fossil and the rock formed together. Structures like stromatolites can’t confirm life on their own, since abiotic processes can produce similar forms, but they’re large enough to detect with rover imaging. That makes carbonate a practical target on Mars, as long as structures are paired with supporting evidence like mineralogy and chemistry.
 
+This is directly relevant to Jezero Crater, which is an ancient dried up lake basin on the surface of Mars. CRISM (an imaging tool on the Mars Reconnaissance Orbiter) show carbonate-bearing deposits in Jezero, including along the crater’s inner margin, where they may have formed near the shoreline of the ancient lake. On Earth, shallow, near-shore water is exactly where microbial carbonates like stromatolites tend to form. Perseverance has explored these units, so if Earth’s record is any guide, Jezero’s carbonates are a strong place to look for microbial structures, with the caveat that a structure alone won’t be enough to confirm life.
+
+## Environment
+I think a cool plot for me to make would be an alluvial plot. More in the sketches notebook ...
+
+```{r}
+#| label: environment-looking
+
+unique(df$environment)
 
 ```
+
