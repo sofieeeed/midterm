@@ -80,6 +80,7 @@ glimpse(df)
 # i am not a biologist (i know, confusing) so i had do a little bit of researching here to pick out what the some of names here meant (most of the ones i didn't know were animals, go figure). i only want single celled organisms and simple algae, namely stuff like cyanobacteria. 
 unique(df$phylum)
 
+
 microbial_phylums <- df |>
   filter(phylum %in% 
            c("Cyanobacteria",        # photosynthetic bacteria

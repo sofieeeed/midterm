@@ -1,11 +1,42 @@
 ---
 title: Final draft
-author: Your name
+author: Sofia Dominesey
 format: gfm
 ---
 
 ```{r}
 #| label: setup
 
-# 
+library(dplyr)
+library(ggplot2)
+library(ggalluvial)
+library(ggridges)
+
+source(here::here("utils", "midterm_utils.R"))
 ```
+
+```{r}
+#| label: alluvial-phylum-lithology-environment
+
+alluv_counts <- pbdb_clean |>
+  count(phylum, lithology1, env_group)
+
+ggplot(alluv_counts,
+       aes(axis1 = phylum, axis2 = lithology1, axis3 = env_group, y = n)) +
+  geom_alluvium(aes(fill = lithology1)) +
+  geom_stratum() +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("Phylum", "Lithology", "Environment")) +
+  scale_fill_manual(values = c("Biogenic/chemical deposits" = sunlight_pal$main_orange ,
+                               "Carbonate" = sunlight_pal$main_blue, 
+                               "Mixed carbonate/silicicastic" = "#A3A39D", 
+                               "Not reported" = "#D6D6D2",
+                               "Silicicastic" = "#C0C0BB"))
+  theme_minimal()
+```
+
+```{r}
+#| label: ridgeline-lithology-by-average-age
+```
+
