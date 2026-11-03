@@ -9,6 +9,7 @@ format: gfm
 
 library(dplyr)
 library(ggplot2)
+library(tidyverse)
 library(ggalluvial)
 library(ggridges)
 
@@ -17,26 +18,191 @@ source(here::here("utils", "midterm_utils.R"))
 
 ```{r}
 #| label: alluvial-phylum-lithology-environment
+#| fig-width: 10
+#| fig-height: 8
+#| fig-alt: "Alluvial chart showing 1,848 occurrences of early microbial fossils from the Archean to Cambrian, flowing from phylum (left), lithology (center), to environmental setting (right). Cyanobacteria make up most occurrences at approx. 65%. About 59% of occurrences are from carbonate rocks, pictured in a teal blue color. Biogenic/chemical deposits are pictured in orange and flow mostly into coastal/marginal environments. "
 
 alluv_counts <- pbdb_clean |>
-  count(phylum, lithology1, env_group)
+  count(phylum, lithology_group, env_group)
 
-ggplot(alluv_counts,
-       aes(axis1 = phylum, axis2 = lithology1, axis3 = env_group, y = n)) +
-  geom_alluvium(aes(fill = lithology1)) +
-  geom_stratum() +
+alluvial_chart <- ggplot(alluv_counts,
+       aes(axis1 = factor(phylum, levels = c("Chlorophyta", "Rhodophyta", "Cyanobacteria", 
+                                             "Foraminifera", "Radiolaria")), 
+           axis2 = factor(lithology_group, levels = c("Biogenic/chemical deposits", "Carbonate", 
+                                                 "Siliciclastic", "Mixed carbonate/siliciclastic", 
+                                                 "Not reported")), 
+           axis3 = factor(env_group, levels = c("Coastal/marginal", "Shallow subtidal", "Reef", 
+                                                "Deep subtidal/offshore", "Deep water", "Non-marine", 
+                                                "Unspecified")),
+           y = n)) +
+  geom_alluvium(aes(fill = lithology_group)) +
+  geom_stratum(width = 1/3, 
+               fill = sunlight_pal$bg_light,
+               color = sunlight_pal$line_grey, 
+               linewidth = 0.3) +
   geom_text(stat = "stratum",
+            size = 2.5, 
+            family = main_font, 
+            color = sunlight_pal$text_main,
             aes(label = after_stat(stratum))) +
-  scale_x_discrete(limits = c("Phylum", "Lithology", "Environment")) +
+  scale_x_discrete(limits = c("Phylum", "Lithology", "Environment"), 
+                   expand = expansion(add = c(0.8, 0.9))) +
   scale_fill_manual(values = c("Biogenic/chemical deposits" = sunlight_pal$main_orange ,
                                "Carbonate" = sunlight_pal$main_blue, 
-                               "Mixed carbonate/silicicastic" = "#A3A39D", 
+                               "Mixed carbonate/siliciclastic" = "#A3A39D", 
                                "Not reported" = "#D6D6D2",
-                               "Silicicastic" = "#C0C0BB"))
-  theme_minimal()
+                               "Siliciclastic" = "#C0C0BB")) +
+  labs(title = "**Most of Earth's early microbial fossils are preserved in carbonate rock**<br><span style='font-size:11pt'>Fossil occurrences of microbes and simple algae, traced from biological group to primary rock type to depositional environment. Archean–Cambrian, approx. 3.5 billion to 485 million years ago.</span>",
+       caption = "Data: Paleobiology Database (paleobiodb.org), downloaded October 2026. Includes 1,848 occurrences from across the globe. Lithology is primary lithology only; environments grouped following PBDB environment categories. Chart: Sofia Dominesey.",
+       x = NULL,
+       y = NULL) +
+   coord_cartesian(clip = "off") +
+   annotate("textbox",
+           x = 3.25, 
+           y = 1500,
+           label = "About **59%** of occurrences are found in carbonates, likely formed by microbial mats like stromatolites.",
+           hjust = 0, 
+           halign = 0,
+           width = unit(1.6, "inch"),
+           fill = sunlight_pal$bg_light,
+           box.color = sunlight_pal$line_grey,
+           box.padding = unit(c(6, 8, 6, 8), "pt"), 
+           family = main_font,
+           color = sunlight_pal$text_main,
+           size = 2.5,
+           lineheight = 0.9) +
+  annotate("textbox",
+         x = 3.25,
+         y = 250,
+         label = "**24%** of occurrences have no recorded setting or vague settings.",
+         hjust = 0, 
+         halign = 0,
+         width = unit(1.6, "inch"),
+         fill = sunlight_pal$bg_light,
+         box.color = sunlight_pal$line_grey,
+         box.padding = unit(c(6, 8, 6, 8), "pt"),
+         family = main_font, 
+         color = sunlight_pal$text_main,
+         size = 2.5, 
+         lineheight = 0.9) +
+  annotate("textbox",
+         x = 0.78, y = 950,
+         label = "Cyanobacteria dominate this record, with **1,199** occurrences.",
+         hjust = 1, 
+         halign = 0,
+         width = unit(1.5, "inch"),
+         fill = sunlight_pal$bg_light,
+         box.color = sunlight_pal$line_grey,
+         box.padding = unit(c(6, 8, 6, 8), "pt"),
+         family = main_font,
+         color = sunlight_pal$text_main,
+         size = 2.5,
+         lineheight = 0.9) +
+  sunlight() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        axis.text.y = element_blank())
+alluvial_chart
+
+showtext_opts(dpi = 300)
+ggsave(here::here("plots", "dominesey-phylum-lithology-env-alluvial.png"),
+       alluvial_chart, width = 10, height = 8, dpi = 300)
+
 ```
 
 ```{r}
 #| label: ridgeline-lithology-by-average-age
+#| fig-width: 10
+#| fig-height: 8
+#| fig-alt: "Ridgeline plot of estimated fossil ages of microbes and simple algae by lithology. Time runs from 3500 million years ago to about 485 million years ago, left to right. Dashed lines mark the end of the Archean (2,500 million years ago) and the beginning of the Cambrian (539 million years ago). All three rock types have most of their fossils between about 900 and 500 million years ago. Siliciclastic rock (586 occurrences, gray) extends back to about 1,900 million years ago. Carbonate (1,094 occurrences, teal) extends back to about 2,100 million years ago, with a few records as old as 2,650. Biogenic/chemical deposits (121 occurrences, orange) have the longest record. A thin tail of fossils in this category reaches back to about 3,400 million years ago, which is close to the age of Jezero Crater's lake deposits."
+
+ridgeline_data <- pbdb_clean |>
+  filter(lithology_group %in% c("Carbonate", "Siliciclastic", "Biogenic/chemical deposits"))
+
+ridgeline_labels <- ridgeline_data |>
+  count(lithology_group) |>
+  mutate(lab = paste0(lithology_group, "\n(n = ", scales::comma(n), ")"))
+
+
+ridgeline_chart <- ggplot(ridgeline_data, 
+                          aes(x = est_avg_age,
+                              y = lithology_group, 
+                              fill = lithology_group)) +
+  geom_density_ridges(bandwidth = 80, alpha = 0.85,
+                      color = sunlight_pal$bg, scale = 1.1) +
+  annotate("textbox",
+           x = 3550, 
+           y = 1.5,
+           label = "The oldest fossils here are in chemical deposits like **chert**, reaching back about 3.4 billion years, close to the age of Jezero Crater's lake deposits.",
+           hjust = 0, 
+           halign = 0, 
+           vjust = 0,
+           width = unit(2, "inch"),
+           fill = sunlight_pal$bg_light,
+           box.color = sunlight_pal$line_grey,
+           box.padding = unit(c(6, 8, 6, 8), "pt"),
+           family = main_font, 
+           color = sunlight_pal$text_main,
+           size = 2.5, 
+           lineheight = 0.9)  +
+  # added eon boundary lines for reference
+  geom_vline(xintercept = c(2500, 538.8),
+             color = sunlight_pal$line_grey, 
+             linetype = "dashed", 
+             linewidth = 0.4) +
+  annotate("text", 
+           x = c(3000, 1500, 510), 
+           y = 3.9,
+           label = c("Archean", "Proterozoic", "Cambrian"),
+           family = main_font, 
+           color = sunlight_pal$text_light, 
+           size = 3) +
+  scale_x_reverse(breaks = c(3500, 3000, 2500, 2000, 1500, 1000, 500),
+                  labels = scales::comma) +
+  scale_y_discrete(labels = setNames(ridgeline_labels$lab, ridgeline_labels$lithology_group),
+                   expand = expansion(add = c(0.2, 1.2))) +
+  scale_fill_manual(values = c("Biogenic/chemical deposits" = sunlight_pal$main_orange,
+                               "Carbonate" = sunlight_pal$main_blue,
+                               "Siliciclastic" = "#A3A39D")) +
+  coord_cartesian(clip = "off") +
+  labs(title = "**The oldest fossils in Earth's early fossil record are found in chemical deposits, such as cherts, not carbonate**<br><span style='font-size:11pt'>Estimated age of fossil occurrences of microbes and simple algae, by primary rock type. Each ridge is scaled to the same area, so compare shapes instead of heights.</span>",
+       caption = "Data: Paleobiology Database (paleobiodb.org), downloaded October 2026. 1,801 occurrences from across the globe; excludes 46 with no reported rock type and 1 mixed carbonate/siliciclastic. Age is the midpoint of each fossil's reported age range. Chart: Sofia Dominesey.",
+       x = "Million years ago", 
+       y = NULL) +
+  sunlight() +
+  theme(legend.position = "none",
+        panel.grid.major.y = element_blank())
+
+ridgeline_chart
+
+showtext_opts(dpi = 300)
+ggsave(here::here("plots", "dominesey-age-by-lithology-ridgeline.png"),
+       ridgeline_chart, width = 10, height = 8, dpi = 300)
 ```
+
+
+```{r}
+#| label: table-lithology-by-environment
+
+pbdb_clean |>
+  filter(lithology_group %in% c("Carbonate", "Siliciclastic", "Biogenic/chemical deposits")) |>
+  group_by(lithology_group) |>
+  summarise(n = n(),
+            coastal     = mean(env_group == "Coastal/marginal"),
+            shallow     = mean(env_group == "Shallow subtidal"),
+            reef        = mean(env_group == "Reef"),
+            deep_sub    = mean(env_group == "Deep subtidal/offshore"),
+            deep_water  = mean(env_group == "Deep water"),
+            unspecified = mean(env_group == "Unspecified")) |>
+  arrange(desc(n)) |>
+  mutate(across(coastal:unspecified, \(x) scales::percent(x, accuracy = 1))) |>
+  knitr::kable(caption = "Global percentage of early fossil occurrences in each depositional environment",
+               col.names = c("Rock type", "Occurrences", "Coastal/marginal", "Shallow subtidal",
+                             "Reef", "Deep subtidal/offshore", "Deep water", "Unspecified"),
+               format.args = list(big.mark = ","),
+               align = "lrrrrrrr")
+```
+
+
+
 

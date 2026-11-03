@@ -1,0 +1,212 @@
+# Sketches
+Sofia Dominesey
+
+``` r
+library(tidyr)
+```
+
+    Warning: package 'tidyr' was built under R version 4.5.3
+
+``` r
+library(ggplot2)
+```
+
+    Warning: package 'ggplot2' was built under R version 4.5.3
+
+``` r
+library(dplyr)
+```
+
+    Warning: package 'dplyr' was built under R version 4.5.3
+
+    Attaching package: 'dplyr'
+
+    The following objects are masked from 'package:stats':
+
+        filter, lag
+
+    The following objects are masked from 'package:base':
+
+        intersect, setdiff, setequal, union
+
+``` r
+library(ggalluvial)
+```
+
+    Warning: package 'ggalluvial' was built under R version 4.5.3
+
+``` r
+library(ggridges)
+```
+
+    Warning: package 'ggridges' was built under R version 4.5.3
+
+``` r
+df <- readr::read_csv(here::here("data", "pbdb_data.csv"), show_col_types = FALSE)
+
+df <- df |>
+  select(occurrence_no, 
+         collection_no, 
+         identified_name, 
+         accepted_name, 
+         phylum, 
+         class, 
+         genus, 
+         early_interval, 
+         max_ma, 
+         min_ma, 
+         formation, 
+         lithology1, 
+         lithology2, 
+         lithdescript, 
+         environment)
+
+microbial_phylums <- df |>
+  filter(phylum %in% 
+           c("Cyanobacteria",        # photosynthetic bacteria
+             "Chlorophyta",          # green algae
+             "Foraminifera",         # single celled protists with shells
+             "Rhodophyta",           # red algae
+             "Radiolaria"))          # single celled protists with silica skeletons
+
+lithology <- microbial_phylums |>
+  mutate(lithology1 = case_when(
+    lithology1 %in% c("\"limestone\"", "\"carbonate\"", "chalk", "dolomite", "lime mudstone", 
+                      "grainstone", "packstone", "wackestone", "rudstone", "floatstone", 
+                      "framestone", "bafflestone", "bindstone", "\"reef rocks\"") ~ "carbonate",
+    lithology1 %in% c("sandstone", "siltstone", "mudstone", "claystone", 
+                      "\"shale\"", "conglomerate", "gravel", "\"siliciclastic\"") ~ "siliciclastic",
+    lithology1 %in% c("marl") ~ "mixed carbonate-siliciclastic",
+    lithology1 %in% c("chert", "phosphorite") ~ "biogenic/chemical deposits",
+    lithology1 == "not reported" | is.na(lithology1) ~ "not reported",
+    .default = "other"
+  ))
+```
+
+## Chart 1:
+
+I think an alluvial chart would be cool for this project as a way to get
+me practice using something I haven’t worked with yet.
+
+``` r
+alluv_counts <- lithology |>
+  count(lithology1, phylum, environment)   
+
+ggplot(alluv_counts,
+       aes(axis1 = lithology1, axis2 = phylum, axis3 = environment, y = n)) +
+  geom_alluvium(aes(fill = phylum)) +
+  geom_stratum() +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("Lithology", "Phylum", "Environment"))
+```
+
+![](02_sketches_files/figure-commonmark/alluvial-code-sketch-1-1.png)
+
+``` r
+# to- do:
+#   - group environments
+#   - fix spacing
+#   - titles
+#   - maybe highlight the biggest groups to make srtand out
+#   - should i group by lithology in the middle instead?
+#   - reorder so rodophyta and chlorophyta next to each ther, keep cyanobacteria in middle
+```
+
+``` r
+# environment grouping based on: https://paleobiodb.org/public/tips/environtips.html
+data <- lithology |>
+  mutate(env_group = case_when(
+    environment %in% c("peritidal", "lagoonal", "paralic indet.", "delta front",
+                       "prodelta", "deltaic indet.", "foreshore", "shoreface",
+                       "transition zone/lower shoreface", "coastal indet.",
+                       "marginal marine indet.") ~ "coastal/marginal", 
+    environment %in% c("open shallow subtidal", "lagoonal/restricted shallow subtidal", 
+                       "shallow subtidal indet.", "sand shoal") ~ "shallow subtidal",
+    environment %in% c("reef, buildup or bioherm", "intrashelf/intraplatform reef", 
+                       "platform/shelf-margin reef", "slope/ramp reef", "perireef or subreef") ~ "reef",
+    environment %in% c("deep subtidal ramp", "deep subtidal shelf", "deep subtidal indet.", 
+                       "offshore", "offshore ramp", "offshore shelf", "offshore indet.") ~ "deep subtidal/offshore",
+    environment %in% c("slope", "submarine fan", "basinal (carbonate)", "basinal (siliciclastic)",
+                       "basinal (siliceous)", "deep-water indet.") ~ "deep water",
+    environment %in% c("terrestrial indet.", "glacial") ~ "non-marine",
+    environment %in% c("marine indet.", "carbonate indet.", NA) ~ "unspecified"
+  ))
+
+alluv_counts <- data |>
+  count(phylum, lithology1, env_group) 
+
+ggplot(alluv_counts,
+       aes(axis1 = phylum, axis2 = lithology1, axis3 = env_group, y = n)) +
+  geom_alluvium(aes(fill = lithology1)) +
+  geom_stratum() +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("Phylum", "Lithology", "Environment")) +
+  scale_fill_manual(values = c("carbonate" = "green", "biogenic/chemical deposits" = "grey50", 
+                               "mixed carbinate/siliciclastic" = "grey40", "not reported" = "grey80", 
+                               "siliciclastic" = "grey60", "other" = "black")) + # mock colors
+  theme_minimal()
+```
+
+![](02_sketches_files/figure-commonmark/alluvial-chart-sketch-2-1.png)
+
+``` r
+# MUCHHHH BETTER
+```
+
+I’m feeling really good about this chart! For the final version, I have
+a few more things to tidy up, but I’ll do this over there. To-do: -
+capitalize labels (from “carbonate” to “Carbonate”, ect) - reorder:
+phylum (algae together, Cyanobacteria near the middle), environment
+group in order from acsending to descending (so like shore to shallow
+and down) - fix “mixed carbonate-siliciclastic” color name - colors -
+spacing - title, subtitle, caption (PBDB + download date), y-axis
+label - alt text - ggsave
+
+## Chart 2
+
+I did one of the harder charts, so that means I only have to make 1
+more!! I’m thinking of going with a ridgeline plot of some sort because
+I love the look of those guys. My first idea is to do age by one of the
+columns I’ve been looking at. I think phylum or lithology works best.
+One of my initial questions was “does the mix of lithologies containing
+fossils change over time?”, so I think I’ll do a ridgeline plot of just
+that. It also can keep the same colors as my alluvial plot, since I
+grouped by lithology in that graph as well. The end goal of this plot is
+to show what rocks hold fossils at what times, and if that changes
+across time.
+
+``` r
+# in the original data, it gives a max age and a minimum age, so I need to calc estimated average age
+# def should note that midpoint doesnt show range, some estimate ranges are huge
+data <- data |>
+    mutate(est_avg_age = (max_ma + min_ma) / 2)
+summary(data$est_avg_age)
+```
+
+       Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      487.6   516.5   860.0   891.4  1100.0  3400.0 
+
+``` r
+ggplot(data, aes(x = est_avg_age, y = lithology1)) +
+  geom_density_ridges() +
+  scale_x_reverse()
+```
+
+    Picking joint bandwidth of 79.2
+
+![](02_sketches_files/figure-commonmark/ridgeline-sketch-1-1.png)
+
+This chart immediately shows that most stuff is younger in the records
+that we have, which makes sense. It still shows that carbonates dominate
+the record with the most entries and a big range, but it shows that
+biogenic/chemical deposits actually have the largest range, with entries
+that have over a 3500ma average age. This matters for my capstone
+because carbonate rocks have been detected in only a few places on Mars,
+including Jezero, and Jezero’s lake deposits date to roughly 3.5 billion
+years ago or older, from when Mars still had liquid water. So while
+carbonate dominates Earth’s record overall, the Earth fossils closest in
+age to Jezero’s rocks are in actually in chemical deposits. To-do: -
+formatting/theme - drop mixed carb/sil group b/c too small - drop not
+reported?? - ggsave - alt text

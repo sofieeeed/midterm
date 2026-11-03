@@ -128,7 +128,8 @@ To-do:
   - colors
   - spacing
   - title, subtitle, caption (PBDB + download date), y-axis label
-  - alt text (fig-alt) and ggsave() to ./plots
+  - alt text 
+  - ggsave
   
 ## Chart 2
 I did one of the harder charts, so that means I only have to make 1 more!! I'm thinking of going with a ridgeline plot of some sort because I love the look of those guys. My first idea is to do age by one of the columns I've been looking at. I think phylum or lithology works best. 
@@ -149,4 +150,9 @@ ggplot(data, aes(x = est_avg_age, y = lithology1)) +
 ```
 This chart immediately shows that most stuff is younger in the records that we have, which makes sense. It still shows that carbonates dominate the record with the most entries and a big range, but it shows that biogenic/chemical deposits actually have the largest range, with entries that have over a 3500ma average age.
 This matters for my capstone because carbonate rocks have been detected in only a few places on Mars, including Jezero, and Jezero’s lake deposits date to roughly 3.5 billion years ago or older, from when Mars still had liquid water. So while carbonate dominates Earth’s record overall, the Earth fossils closest in age to Jezero’s rocks are in actually in chemical deposits. 
-
+To-do:
+    - formatting/theme
+    - drop mixed carb/sil group b/c too small 
+    - drop not reported?? 
+    - ggsave
+    - alt text
